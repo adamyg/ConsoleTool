@@ -29,11 +29,13 @@ void Summary(HANDLE hConsole, const DWORD dwMode);
 void DisplayAvailableColorsVT();
 void DisplayAvailableColors256();
 void DisplayAvailableColorsCubes();
+void DisplayAvailableColorsXTERM();
 void DisplayCurrentCP(HANDLE hConsole);
 void DisplayCurrentFontDetails(HANDLE hConsole);
 void PrintError(string);
 
-#define CUBES		2
+#define XTERMCOLORS	4
+#define CUBES256	2
 #define VTCOLORS	1
 #define NOCOLORS	0
 
@@ -44,7 +46,8 @@ static int font_info	= 1;
 static struct option long_options[] = {
 	{"verbose",	no_argument,	&verbose_flag, 1},
 	{"brief",	no_argument,	&verbose_flag, 0},
-	{"cubes",	no_argument,	&color_info, CUBES},
+	{"cubes",	no_argument,	&color_info, CUBES256},
+	{"xtermcolors",	no_argument,	&color_info, XTERMCOLORS},
 	{"vtcolors",	no_argument,	&color_info, VTCOLORS},
 	{"nocolors",	no_argument,	&color_info, NOCOLORS},
 	{"font",	no_argument,	&font_info, 1},
@@ -67,7 +70,7 @@ int main(int argc, const char *argv[])
 			verbose_flag = 1;
 			break;
 		case 'c':
-			color_info = CUBES;
+			color_info = CUBES256;
 			break;
 //		case 's':
 //			break;
@@ -147,12 +150,18 @@ void Summary(HANDLE hConsole, const DWORD dwMode)
 	(void) GetConsoleMode(hConsole, &dwNewMode);
 
 	if (ENABLE_VIRTUAL_TERMINAL_PROCESSING & dwNewMode) {
-		if (CUBES == color_info) {
+		switch (color_info) {
+		case XTERMCOLORS:
+			DisplayAvailableColorsXTERM();
+			break;
+		case CUBES256:
 			DisplayAvailableColorsCubes();
-		} else if (VTCOLORS == color_info) {
+			break;
+		case VTCOLORS:
 			DisplayAvailableColorsVT();
 			DisplayAvailableColors256();
-		}
+			break;
+                }
 	} else {
 		PrintError("Can't display ANSI/VT-Sequences - you may need to upgrade to a recent Windows 10 build");
 	}
@@ -187,8 +196,7 @@ void DisplayAvailableColors256()
 		}
 		cout << endl;
 	}
-
-	cout << "\n";
+	cout << endl;
 
 	for (unsigned i = 0; i < 16; ++i) {	// backgrounds
 		for (unsigned j = 0; j < 16; ++j) {
@@ -196,10 +204,9 @@ void DisplayAvailableColors256()
 
 			cout << "\x1b[48;5;" + to_string(code) << "m " << setw(4) << code;
 		}
-		cout << endl;
+                cout << "\x1b[0m" << endl;
 	}
-
-	cout << "\x1b[0m";
+	cout << endl;
 }
 
 
@@ -207,11 +214,11 @@ void DisplayAvailableColorsCubes()
 {
 	cout << "System colors:\n";
 	for (unsigned color = 0; color < 8; ++color) {
-		cout << "\x1b[48;5;" << to_string(color) << "m ";
+		cout << "\x1b[48;5;" << to_string(color) << "m   ";
 	}
 	cout << "\x1b[0m\n";
 	for (unsigned color = 8; color < 16; ++color) {
-		cout << "\x1b[48;5;" << to_string(color) << "m ";
+		cout << "\x1b[48;5;" << to_string(color) << "m   ";
 	}
 	cout << "\x1b[0m\n\n";
 
@@ -221,7 +228,7 @@ void DisplayAvailableColorsCubes()
 		for (unsigned red = 0; red < 6; ++red) {
 			for (unsigned blue = 0; blue < 6; ++blue) {
 				unsigned color = 16 + (red * 36) + (green * 6) + blue;
-				cout << "\x1b[48;5;" << to_string(color) << "m ";
+				cout << "\x1b[48;5;" << to_string(color) << "m  ";
 			}
 			cout << "\x1b[0m";
 		}
@@ -235,6 +242,27 @@ void DisplayAvailableColorsCubes()
 	}
 
 	cout << "\x1b[0m\n";
+}
+
+
+void DisplayAvailableColorsXTERM()
+{
+	char buffer[512] = {0};
+
+	cout << "XTERM Colors:\n\n";
+	cout << "Display           Number    Name                  HEX      RGB\n";
+
+	for (unsigned i = 0; i < _countof(XTERM_COLORS); ++i) {
+		const struct XTERM_COLOR *color = XTERM_COLORS + i;
+
+		snprintf(buffer, sizeof(buffer) - 1,            // Background RGB
+		    "\x1b[48;2;%u;%u;%um%16s\x1b[0m  %-8u  %-20.20s  #%06x  %02x/%02x/%02x\n",
+		    GetRValue(color->rbg), GetGValue(color->rbg), GetBValue(color->rbg), "",
+			i, color->name, color->rbg, GetRValue(color->rbg), GetGValue(color->rbg), GetBValue(color->rbg));
+
+		cout << buffer;
+	}
+	cout << endl;
 }
 
 

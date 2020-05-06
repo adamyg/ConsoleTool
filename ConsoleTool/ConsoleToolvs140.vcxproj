@@ -163,6 +163,7 @@
     <ClInclude Include="getopt.h" />
     <ClInclude Include="vtdefs.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="xtermdefs.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ConsoleTool.cpp" />

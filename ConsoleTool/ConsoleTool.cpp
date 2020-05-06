@@ -281,28 +281,28 @@ void DisplayAvailableColorsXTERM()
 
 void DisplayAvailableColorConsole(HANDLE hConsole)
 {
-        CONSOLE_SCREEN_BUFFER_INFOEX csbix = {0};
+	CONSOLE_SCREEN_BUFFER_INFOEX csbix = {0};
 	char buffer[512] = {0};
 
 	cout << "Console Palette:\n\n";
 
-        csbix.cbSize = sizeof(csbix);
-        if (GetConsoleScreenBufferInfoEx (hConsole, &csbix)) {
-	        cout << "  Display           Number    Name                  HEX      RGB\n";
+	csbix.cbSize = sizeof(csbix);
+	if (GetConsoleScreenBufferInfoEx (hConsole, &csbix)) {
+		cout << "  Display           Number    Name                  HEX      RGB\n";
 
-	        for (unsigned i = 0; i < _countof(csbix.ColorTable); ++i) {
-                        const COLORREF rgb = csbix.ColorTable[i];
+		for (unsigned i = 0; i < _countof(csbix.ColorTable); ++i) {
+			const COLORREF rgb = csbix.ColorTable[i];
 
-		        snprintf(buffer, sizeof(buffer) - 1,    // Background RGB
-		            "  \x1b[48;2;%u;%u;%um%16s\x1b[0m  %-8u  %-20.20s  #%06x  %02x/%02x/%02x\n",
-		            GetRValue(rgb), GetGValue(rgb), GetBValue(rgb), "",
-			        i, "Console color", rgb, GetRValue(rgb), GetGValue(rgb), GetBValue(rgb));
+			snprintf(buffer, sizeof(buffer) - 1,    // Background RGB
+			    "  \x1b[48;2;%u;%u;%um%16s\x1b[0m  %-8u  %-20.20s  #%06x  %02x/%02x/%02x\n",
+			    GetRValue(rgb), GetGValue(rgb), GetBValue(rgb), "",
+				i, "Console color", rgb, GetRValue(rgb), GetGValue(rgb), GetBValue(rgb));
 
-		    cout << buffer;
-                }
-        } else {
-                cout << "  Not available\n";
-        }
+			cout << buffer;
+		}
+	} else {
+		cout << "  Not available\n";
+	}
 	cout << endl;
 }
 
@@ -372,13 +372,15 @@ void DisplayCurrentFontDetails(HANDLE hConsole)
 	}
 
 	if (fnGetNumberOfConsoleFonts && fnGetConsoleFontInfo &&
-		(count = fnGetNumberOfConsoleFonts()) > 0) {
-		CONSOLE_FONT_INFO *fi = (CONSOLE_FONT_INFO *) calloc(count, sizeof(*fi)), *cursor;
-		DWORD i;					// Windows10, seems these are no longer implemented; always returning: 0.
+		        (count = fnGetNumberOfConsoleFonts()) > 0) {
 
-		cout << "  Idx  WxH\n";
+		CONSOLE_FONT_INFO *fi = (CONSOLE_FONT_INFO *) calloc(count, sizeof(*fi)), *cursor;
+		DWORD i;					// Windows10, seems these are no longer implemented; always returning 0.
+
 		if (NULL != (cursor = fi) &&
 				fnGetConsoleFontInfo(hConsole, FALSE, count, fi)) {
+
+		        cout << "  Idx  WxH\n";
 			for (i = 0; i < count; ++i) {
 				cout << setw(2) << "  " << cursor->nFont <<
 				    "  " << cursor->dwFontSize.X << " x "  << cursor->dwFontSize.Y << endl;
@@ -388,7 +390,11 @@ void DisplayCurrentFontDetails(HANDLE hConsole)
 
 	} else if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,
 			"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Console\\TrueTypeFont", 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
-		const UINT nCodepage = GetConsoleOutputCP();	// Windows10, list doesnt match CMD Properties
+
+		//  There are aditional user specific console settings, example
+		//      'Computer\HKEY_USERS\S-1-5-19\Console' or 'HKCU\Console'
+		//
+		const UINT nCodepage = GetConsoleOutputCP();
 		DWORD rc, cValues = 0;
 
 		(void) SetConsoleOutputCP(65001);		// UTF8, Font also required!
@@ -398,7 +404,7 @@ void DisplayCurrentFontDetails(HANDLE hConsole)
 			CHAR  valueName[128];
 			BYTE  data[128];
 			DWORD i;
-
+	                                                        // Windows10, list doesnt match CMD Properties.
 			for (i = 0, rc = ERROR_SUCCESS; i < cValues; ++i) {
 				DWORD type, cchValueName = sizeof(valueName),
 					cchData = (sizeof(data) - 1);
@@ -407,7 +413,7 @@ void DisplayCurrentFontDetails(HANDLE hConsole)
 				if (ERROR_SUCCESS == (rc = RegEnumValueA(hKey,
 						i, valueName, &cchValueName, NULL, &type, data, &cchData))) {
 					data[cchData] = 0;
-					if (REG_SZ == type) {	// CodePage/Name
+					if (REG_SZ == type) {	// CodePage/Name.
 						cout << "  " << setw(3) << valueName;
 						cout << "  " << ((const char *)data);
 						cout << endl;

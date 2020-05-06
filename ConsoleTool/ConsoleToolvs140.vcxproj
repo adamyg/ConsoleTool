@@ -74,21 +74,25 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)$(Configuration).vs140\</OutDir>
     <IntDir>$(Configuration).vs140\</IntDir>
+    <TargetName>ConsoleTool</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)$(Platform).vs140\$(Configuration)\</OutDir>
     <IntDir>$(Platform).vs140\$(Configuration)\</IntDir>
+    <TargetName>ConsoleTool</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)$(Configuration).vs140\</OutDir>
     <IntDir>$(Configuration).vs140\</IntDir>
+    <TargetName>ConsoleTool</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)$(Platform).vs140\$(Configuration)\</OutDir>
     <IntDir>$(Platform).vs140\$(Configuration)\</IntDir>
+    <TargetName>ConsoleTool</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

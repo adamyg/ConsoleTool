@@ -1,5 +1,5 @@
 //
-//  ConsoleTool -- Win32 console tweak tool.
+//  ConsoleTool -- Win32 console info tool.
 //
 
 #include "pch.h"
@@ -23,6 +23,10 @@
 
 using namespace std;
 
+typedef DWORD (WINAPI *GetNumberOfConsoleFonts_t)(void);
+typedef BOOL  (WINAPI *GetConsoleFontInfo_t)(HANDLE, BOOL, DWORD, CONSOLE_FONT_INFO *);
+typedef BOOL  (WINAPI *SetConsoleFont_t)(HANDLE, DWORD);
+
 void Status(DWORD dwMode);
 void Summary(HANDLE hConsole, const DWORD dwMode);
 
@@ -30,13 +34,15 @@ void DisplayAvailableColorsVT();
 void DisplayAvailableColors256();
 void DisplayAvailableColorsCubes();
 void DisplayAvailableColorsXTERM();
+void DisplayAvailableColorConsole(HANDLE hConsole);
 void DisplayCurrentCP(HANDLE hConsole);
 void DisplayCurrentFontDetails(HANDLE hConsole);
 void PrintError(string);
 
-#define XTERMCOLORS	4
-#define CUBES256	2
-#define VTCOLORS	1
+#define CONSOLECOLORS	0x08
+#define XTERMCOLORS	0x04
+#define CUBES256	0x02
+#define VTCOLORS	0x01
 #define NOCOLORS	0
 
 static int verbose_flag = 0;
@@ -44,16 +50,17 @@ static int color_info	= 1;
 static int font_info	= 1;
 
 static struct option long_options[] = {
-	{"verbose",	no_argument,	&verbose_flag, 1},
-	{"brief",	no_argument,	&verbose_flag, 0},
-	{"cubes",	no_argument,	&color_info, CUBES256},
-	{"xtermcolors",	no_argument,	&color_info, XTERMCOLORS},
-	{"vtcolors",	no_argument,	&color_info, VTCOLORS},
-	{"nocolors",	no_argument,	&color_info, NOCOLORS},
-	{"font",	no_argument,	&font_info, 1},
-	{"nofont",	no_argument,	&font_info, 0},
-//	{"set", 	no_argument,	0, 's'},
-//	{"clr", 	no_argument,	0, 'c'},
+	{"verbose",		no_argument, &verbose_flag, 1},
+	{"brief",		no_argument, &verbose_flag, 0},
+	{"cubes",		no_argument, &color_info, CUBES256},
+	{"consolecolors",	no_argument, &color_info, CONSOLECOLORS},
+	{"xtermcolors",		no_argument, &color_info, XTERMCOLORS},
+	{"vtcolors",		no_argument, &color_info, VTCOLORS},
+	{"nocolors",		no_argument, &color_info, NOCOLORS},
+	{"font",		no_argument, &font_info, 1},
+	{"nofont",		no_argument, &font_info, 0},
+//	{"set", 		no_argument, 0, 's'},
+//	{"clr", 		no_argument, 0, 'c'},
 	{0}
 	};
 
@@ -151,6 +158,9 @@ void Summary(HANDLE hConsole, const DWORD dwMode)
 
 	if (ENABLE_VIRTUAL_TERMINAL_PROCESSING & dwNewMode) {
 		switch (color_info) {
+		case CONSOLECOLORS:
+			DisplayAvailableColorConsole(hConsole);
+			break;
 		case XTERMCOLORS:
 			DisplayAvailableColorsXTERM();
 			break;
@@ -177,7 +187,9 @@ void DisplayAvailableColorsVT()
 	cout << "Available Colors VT:" << endl;
 
 	for (short c = 0; c < VT_MAX_COLOR; ++c) {
-		if (c > 0) { cout << "\x1b[" << to_string(30 + c) << 'm'; }
+		if (c > 0) {
+                        cout << "  \x1b[" << to_string(30 + c) << 'm';
+                }
 		cout << "0x" << hex << c << dec << ": " << VT_COLOR_NAMES[c] << VT_RESET << endl;
 	}
 	cout << endl;
@@ -188,7 +200,7 @@ void DisplayAvailableColors256()
 {
 	cout << "Available Colors 256:" << endl;
 
-	for (unsigned i = 0; i < 16; ++i) {	// foregrounds
+	for (unsigned i = 0; i < 16; ++i) {     // foregrounds
 		for (unsigned j = 0; j < 16; ++j) {
 			const unsigned code = i * 16 + j;
 
@@ -250,18 +262,47 @@ void DisplayAvailableColorsXTERM()
 	char buffer[512] = {0};
 
 	cout << "XTERM Colors:\n\n";
-	cout << "Display           Number    Name                  HEX      RGB\n";
+	cout << "  Display           Number    Name                  HEX      RGB\n";
 
 	for (unsigned i = 0; i < _countof(XTERM_COLORS); ++i) {
 		const struct XTERM_COLOR *color = XTERM_COLORS + i;
+		const COLORREF rgb = color->rgb;
 
 		snprintf(buffer, sizeof(buffer) - 1,            // Background RGB
-		    "\x1b[48;2;%u;%u;%um%16s\x1b[0m  %-8u  %-20.20s  #%06x  %02x/%02x/%02x\n",
-		    GetRValue(color->rbg), GetGValue(color->rbg), GetBValue(color->rbg), "",
-			i, color->name, color->rbg, GetRValue(color->rbg), GetGValue(color->rbg), GetBValue(color->rbg));
+		    "  \x1b[48;2;%u;%u;%um%16s\x1b[0m  %-8u  %-20.20s  #%06x  %02x/%02x/%02x\n",
+		    GetRValue(rgb), GetGValue(rgb), GetBValue(rgb), "",
+			i, color->name, rgb, GetRValue(rgb), GetGValue(rgb), GetBValue(rgb));
 
 		cout << buffer;
 	}
+	cout << endl;
+}
+
+
+void DisplayAvailableColorConsole(HANDLE hConsole)
+{
+        CONSOLE_SCREEN_BUFFER_INFOEX csbix = {0};
+	char buffer[512] = {0};
+
+	cout << "Console Palette:\n\n";
+
+        csbix.cbSize = sizeof(csbix);
+        if (GetConsoleScreenBufferInfoEx (hConsole, &csbix)) {
+	        cout << "  Display           Number    Name                  HEX      RGB\n";
+
+	        for (unsigned i = 0; i < _countof(csbix.ColorTable); ++i) {
+                        const COLORREF rgb = csbix.ColorTable[i];
+
+		        snprintf(buffer, sizeof(buffer) - 1,    // Background RGB
+		            "  \x1b[48;2;%u;%u;%um%16s\x1b[0m  %-8u  %-20.20s  #%06x  %02x/%02x/%02x\n",
+		            GetRValue(rgb), GetGValue(rgb), GetBValue(rgb), "",
+			        i, "Console color", rgb, GetRValue(rgb), GetGValue(rgb), GetBValue(rgb));
+
+		    cout << buffer;
+                }
+        } else {
+                cout << "  Not available\n";
+        }
 	cout << endl;
 }
 
@@ -280,27 +321,115 @@ void DisplayCurrentCP(HANDLE hConsole)
 }
 
 
+const std::wstring UTF8ToWCHAR(const char *utf8) {
+	const int length = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, NULL,  0);
+	std::wstring result;
+
+	if (length) {
+		result.reserve(length);
+		if (MultiByteToWideChar(CP_UTF8, 0, utf8, -1, (wchar_t *)result.data(), length)) {
+			result.resize(length);
+		}
+	}
+	return result;
+}
+
+
 void DisplayCurrentFontDetails(HANDLE hConsole)
 {
 	CONSOLE_FONT_INFOEX fontInfo = { sizeof(CONSOLE_FONT_INFOEX) };
 
-	cout << "Current Font:" << endl;
+	cout << "Current Font:\n\n";
 
-	if (GetCurrentConsoleFontEx(hConsole, FALSE, &fontInfo))
-	{
-		wcout << "Font face: " << fontInfo.FaceName << endl;
-		cout  << "\tFont weight: " << fontInfo.FontWeight << " (Normal = 400)" << endl;
-		cout  << "\tFont size: [" << fontInfo.dwFontSize.X << " x " << fontInfo.dwFontSize.Y << ']' << endl;
-	}
-	else
-	{
+	if (GetCurrentConsoleFontEx(hConsole, FALSE, &fontInfo)) {
+		wcout << "  Font face: "   << fontInfo.FaceName << endl;
+		cout  << "  Font weight: " << fontInfo.FontWeight << " (Normal = 400)" << endl;
+		cout  << "  Font size: ["  << fontInfo.dwFontSize.X << " x " << fontInfo.dwFontSize.Y << ']' << endl;
+
+	} else {
 		PrintError("Cannot find current font info!");
-		GetLastError();
 	}
+	cout << endl;
+
+        ///////////////////////////////////////////////////////////////////////
+
+	if (! verbose_flag)
+		return;
+
+	cout << "Available Fonts:\n\n";
+
+	GetNumberOfConsoleFonts_t fnGetNumberOfConsoleFonts = NULL;
+	GetConsoleFontInfo_t fnGetConsoleFontInfo = NULL;
+	HMODULE hKernel32 = NULL;
+	HKEY hKey = 0;
+	DWORD count;
+								// Undocumented GetNumberOfConsoleFonts API, XP+
+	if (0 != (hKernel32 = GetModuleHandleA("Kernel32.dll"))) {
+		fnGetNumberOfConsoleFonts = (GetNumberOfConsoleFonts_t) GetProcAddress(hKernel32, "GetNumberOfConsoleFonts");
+		if (fnGetNumberOfConsoleFonts) {
+			fnGetConsoleFontInfo = (GetConsoleFontInfo_t) GetProcAddress(hKernel32, "GetConsoleFontInfo");
+		}
+	}
+
+	if (fnGetNumberOfConsoleFonts && fnGetConsoleFontInfo &&
+		(count = fnGetNumberOfConsoleFonts()) > 0) {
+		CONSOLE_FONT_INFO *fi = (CONSOLE_FONT_INFO *) calloc(count, sizeof(*fi)), *cursor;
+		DWORD i;					// Windows10, seems these are no longer implemented; always returning: 0.
+
+		cout << "  Idx  WxH\n";
+		if (NULL != (cursor = fi) &&
+				fnGetConsoleFontInfo(hConsole, FALSE, count, fi)) {
+			for (i = 0; i < count; ++i) {
+				cout << setw(2) << "  " << cursor->nFont <<
+				    "  " << cursor->dwFontSize.X << " x "  << cursor->dwFontSize.Y << endl;
+			}
+		}
+		free((void *)fi);
+
+	} else if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,
+			"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Console\\TrueTypeFont", 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+		const UINT nCodepage = GetConsoleOutputCP();	// Windows10, list doesnt match CMD Properties
+		DWORD rc, cValues = 0;
+
+		(void) SetConsoleOutputCP(65001);		// UTF8, Font also required!
+
+		if (ERROR_SUCCESS == (rc =
+				RegQueryInfoKey(hKey, NULL, NULL, NULL, NULL, NULL, NULL, &cValues, NULL, NULL, NULL, NULL))) {
+			CHAR  valueName[128];
+			BYTE  data[128];
+			DWORD i;
+
+			for (i = 0, rc = ERROR_SUCCESS; i < cValues; ++i) {
+				DWORD type, cchValueName = sizeof(valueName),
+					cchData = (sizeof(data) - 1);
+
+				valueName[0] = '\0', data[0] = 0;
+				if (ERROR_SUCCESS == (rc = RegEnumValueA(hKey,
+						i, valueName, &cchValueName, NULL, &type, data, &cchData))) {
+					data[cchData] = 0;
+					if (REG_SZ == type) {	// CodePage/Name
+						cout << "  " << setw(3) << valueName;
+						cout << "  " << ((const char *)data);
+						cout << endl;
+					}
+				}
+			}
+		}
+
+		SetConsoleOutputCP(nCodepage);			// Restore Console codepage
+		RegCloseKey(hKey);
+
+	} else {
+		PrintError("Cannot retrieve available font info!");
+	}
+	cout << endl;
 }
+
 
 void PrintError(std::string msg)
 {
+	const DWORD dwErrCode = GetLastError();
+
 	HANDLE hConsole{ GetStdHandle(STD_OUTPUT_HANDLE) };
 	DWORD dwNewMode{};
 	GetConsoleMode(hConsole, &dwNewMode);
@@ -313,27 +442,26 @@ void PrintError(std::string msg)
 	cout << "Error: " << msg << endl;
 
 	LPTSTR lpMessage{};
-
-	DWORD dwErrCode = GetLastError();
-
 	DWORD nChars = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-		NULL, // no source buffer needed
-		dwErrCode, // error code for this message
-		NULL, // default language ID
+		NULL,       // no source buffer needed
+		dwErrCode,  // error code for this message
+		NULL,       // default language ID
 		(LPTSTR)&lpMessage, // allocated by fcn
-		NULL, // minimum size of buffer
-		NULL); // no inserts
+		NULL,       // minimum size of buffer
+		NULL);      // no inserts
 
-	wcout << lpMessage;
+	if (nChars) {
+		wcout << lpMessage;
+	} else {
+		cout << "Unknown error: 0x" << std::hex << dwErrCode << std::dec << "/" << dwErrCode;
+	}
 
 	if (fVTEnabled) {
 		cout << VT_RESET;
 	}
-
 	cout << endl;
 
 	LocalFree(lpMessage);
 }
 
 /*end*/
-

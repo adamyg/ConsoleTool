@@ -8,7 +8,7 @@
 
 const struct XTERM_COLOR {
 	const char *name;
-	COLORREF rbg;
+	COLORREF rgb;
 
 } XTERM_COLORS[] = {
 	/*0  */  {  "Black (SYSTEM)   ", RGB(0,0,0)         },

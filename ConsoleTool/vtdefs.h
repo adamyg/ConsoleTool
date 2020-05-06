@@ -26,5 +26,4 @@ const char VT_COLOR_NAMES[][VT_MAX_COLOR]
 	"White"
 };
 
-
 #endif

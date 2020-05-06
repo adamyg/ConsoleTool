@@ -2,4 +2,6 @@
 
 #include "pch.h"
 
-int main();
+int main(int argc, const char *argv[]);
+
+/*end*/

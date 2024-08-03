@@ -479,6 +479,7 @@ void DisplayAvailableStyles()
 		{ "Faint", VT_FAINT },
 		{ "Italic", VT_ITALIC },
 		{ "Underline", VT_UNDERLINE },
+		{ "SingleUnderline", VT_SINGLEUNDERLINE },
 		{ "DoubleUnderline", VT_DOUBLEUNDERLINE },
 		{ "Undercurl", VT_UNDERCURL },
 		{ "DottedUnderline", VT_DOTTEDUNDERLINE},

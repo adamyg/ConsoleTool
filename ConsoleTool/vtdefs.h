@@ -8,6 +8,7 @@ const char VT_BOLD[]{ "\x1b[1m" };
 const char VT_FAINT[]{ "\x1b[2m" };
 const char VT_ITALIC[]{ "\x1b[3m" };
 const char VT_UNDERLINE[]{ "\x1b[4m" };
+const char VT_SINGLEUNDERLINE[]{ "\x1b[4:1m" };
 const char VT_DOUBLEUNDERLINE[]{ "\x1b[4:2m" };
 const char VT_UNDERCURL[]{ "\x1b[4:3m" };
 const char VT_DOTTEDUNDERLINE[]{ "\x1b[4:4m" };

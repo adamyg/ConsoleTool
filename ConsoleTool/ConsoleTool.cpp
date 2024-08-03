@@ -39,13 +39,15 @@ void DisplayAvailableColorsCubes();
 void DisplayTrueColorRGBScale();
 void DisplayTrueColor16x16x6();
 void DisplayAvailableColorsXTERM();
-void DisplayAvailableColorConsole(HANDLE hConsole);
+void DisplayAvailableConsoleColors(HANDLE hConsole);
+void DisplayAvailableStyles();
 void DisplayCurrentCP(HANDLE hConsole);
 void DisplayCurrentFontDetails(HANDLE hConsole);
 void PrintError(string);
 
 enum {
 	CONSOLECOLORS = 1,
+	STYLES,
 	XTERMCOLORS,
 	VTCOLORS,
 	CUBES256,
@@ -66,6 +68,7 @@ static struct option long_options[] = {
 	{"consolecolors",	no_argument, &color_info, CONSOLECOLORS},
 	{"xtermcolors", 	no_argument, &color_info, XTERMCOLORS},
 	{"vtcolors",		no_argument, &color_info, VTCOLORS},
+	{"styles",		no_argument, &color_info, STYLES},
 	{"font",		no_argument, &font_info, 1},
 	{"nofont",		no_argument, &font_info, 0},
 	{"default",		no_argument, 0, 'c'},
@@ -157,6 +160,7 @@ Usage()
 	 << "  --xtermcolors\n"
 	 << "  --vtcolors\n"
 	 << "\n"
+	 << "  --styles\n"
 	 << "  --[no]font\n"
 	 << "  --verbose\n"
 	 << "  --brief\n"
@@ -212,7 +216,7 @@ void Summary(HANDLE hConsole, const DWORD dwMode, const unsigned functions[])
 		for (unsigned f = 0; f < MAXFUNCTIONS && functions[f]; ++f) {
 			switch (functions[f]) {
 			case CONSOLECOLORS:
-				DisplayAvailableColorConsole(hConsole);
+				DisplayAvailableConsoleColors(hConsole);
 				break;
 			case XTERMCOLORS:
 				DisplayAvailableColorsXTERM();
@@ -229,6 +233,9 @@ void Summary(HANDLE hConsole, const DWORD dwMode, const unsigned functions[])
 				break;
 			case TRUECOLOR2:
 				DisplayTrueColor16x16x6();
+				break;
+			case STYLES:
+				DisplayAvailableStyles();
 				break;
 			}
 		}
@@ -434,7 +441,7 @@ void DisplayAvailableColorsXTERM()
 }
 
 
-void DisplayAvailableColorConsole(HANDLE hConsole)
+void DisplayAvailableConsoleColors(HANDLE hConsole)
 {
 	CONSOLE_SCREEN_BUFFER_INFOEX csbix = {0};
 	char buffer[512] = {0};
@@ -457,6 +464,39 @@ void DisplayAvailableColorConsole(HANDLE hConsole)
 		}
 	} else {
 		cout << "  Not available\n";
+	}
+	cout << endl;
+}
+
+
+void DisplayAvailableStyles()
+{
+	static const struct {
+		const char* name, * vt;
+	} styles[] = {
+		{ "Normal", VT_RESET },
+		{ "Bold", VT_BOLD },
+		{ "Faint", VT_FAINT },
+		{ "Italic", VT_ITALIC },
+		{ "Underline", VT_UNDERLINE },
+		{ "DoubleUnderline", VT_DOUBLEUNDERLINE },
+		{ "Undercurl", VT_UNDERCURL },
+		{ "DottedUnderline", VT_DOTTEDUNDERLINE},
+		{ "DashedUnderline", VT_DASHEDUNDERLINE},
+		{ "Blink", VT_BLINK },
+		{ "RapidBlink", VT_RAPIDBLINK },
+		{ "Reverse", VT_REVERSE },
+		{ "Invisible", VT_INVISIBLE },
+		{ "StrikeThrough", VT_STRIKETHROUGH },
+		{ "DoubleUnderline2", VT_DOUBLEUNDERLINE2 },
+		};
+	const char *text = "The quick brown fox jumps over the lazy dog";
+
+	cout << "Console Styles:\n\n";
+
+	for (unsigned i = 0; i < _countof(styles); ++i) {
+		cout << std::setw(20) << std::right << styles[i].name << std::left
+		    << ": " << styles[i].vt << text << VT_RESET << "\n\n";
 	}
 	cout << endl;
 }
